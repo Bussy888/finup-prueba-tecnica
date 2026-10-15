@@ -1,0 +1,39 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD:-Claims_Dev#2026}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+
+  api:
+    build: ./backend
+    depends_on:
+      - db
+    environment:
+      ConnectionStrings__Default: Server=db;Database=ClaimsDb;User Id=sa;Password=${SA_PASSWORD:-Claims_Dev#2026};TrustServerCertificate=True
+      Admin__ApiKey: ${ADMIN_API_KEY:-admin-prueba-123}
+      Jwt__Key: ${JWT_KEY:-clave-solo-para-docker-local-0123456789}
+      Cors__AllowedOrigins__0: http://localhost:3000
+      Database__MigrateOnStartup: "true"
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+    depends_on:
+      - api
+    environment:
+      API_URL: http://api:8080
+      COOKIE_SECURE: "false"
+    ports:
+      - "3000:3000"
+
+volumes:
+  sqldata:
